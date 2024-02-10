@@ -1,10 +1,10 @@
-FROM golang:1.13.1-stretch as builder
+FROM golang:1.21 as builder
 WORKDIR $GOPATH/src/github.com/davidepedranz/go-hole/
 COPY . ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o /go-hole
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o /go-hole
 
-FROM scratch
+FROM gcr.io/distroless/static-debian11
 COPY --from=builder /go-hole /go-hole
-COPY /data/blacklist.txt /data/blacklist.txt
+COPY /data/test-blacklist.txt /data/blacklist.txt
 ENTRYPOINT ["/go-hole"]
 EXPOSE 53/udp

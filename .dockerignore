@@ -8,3 +8,4 @@ scripts/
 .travis.yml
 .gitignore
 .vscode
+*.tar
