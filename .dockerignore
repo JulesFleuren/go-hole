@@ -5,3 +5,6 @@ go-hole
 README.md
 LICENSE
 scripts/
+.travis.yml
+.gitignore
+.vscode
