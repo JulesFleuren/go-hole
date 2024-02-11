@@ -47,7 +47,7 @@ func combineDomainsFromSources(sources []string) (domainsArray []string, memoryS
 		newDomains, err := getDomains(source)
 
 		if err != nil {
-			fmt.Printf("Could not load from %s, continuing with next source. Error: %s", source, err.Error())
+			fmt.Printf("Could not load from %s, continuing with next source. Error: %s\n", source, err.Error())
 			continue
 		}
 

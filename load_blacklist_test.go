@@ -20,6 +20,7 @@ b.com
 c.com
 c.com
 `
+	emptyResponse = ""
 )
 
 func TestGetDomains(t *testing.T) {
@@ -50,6 +51,32 @@ func TestGetDomains(t *testing.T) {
 	if !reflect.DeepEqual(domains, []string{"b.com", "c.com", "c.com", "f.com"}) {
 		t.Error("Domains are wrong, got: ", domains, " expected: ", []string{"b.com", "c.com", "c.com", "f.com"})
 	}
+}
+
+func TestGetDomains_error(t *testing.T) {
+	_, err := getDomains(`http://thisissomebullshitdom.ain`)
+	if err == nil {
+		t.Errorf("getDomains should throw error")
+	}
+
+	ts1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, emptyResponse)
+	}))
+	defer ts1.Close()
+
+	_, err = getDomains(ts1.URL)
+	if err == nil {
+		t.Errorf("getDomains should throw no domains found in source error")
+	}
+}
+
+func TestLoadBlackListFromSources_empty(t *testing.T) {
+	ts1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, emptyResponse)
+	}))
+	defer ts1.Close()
+
+	LoadBlacklistFromSources([]string{ts1.URL})
 }
 
 func TestCombineDomainsFromSources(t *testing.T) {
