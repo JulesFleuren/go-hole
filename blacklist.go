@@ -3,15 +3,16 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/willf/bloom"
 	"io"
 	"log"
 	"os"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/willf/bloom"
 )
 
 var (
