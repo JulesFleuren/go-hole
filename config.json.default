@@ -1,0 +1,8 @@
+{
+	"DNSPort": "53",
+	"PrometheusPort": "9090",
+	"UpstreamDNS": "1.1.1.1:853",
+	"UpstreamTlsSrvName": "one.one.one.one",
+	"Debug": false,
+	"BlocklistSources": []
+}
