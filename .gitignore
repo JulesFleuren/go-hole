@@ -2,3 +2,4 @@
 go-hole
 .vscode/
 *.tar
+*.pem
