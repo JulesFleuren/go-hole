@@ -3,3 +3,4 @@ go-hole
 .vscode/
 *.tar
 *.pem
+config.json
