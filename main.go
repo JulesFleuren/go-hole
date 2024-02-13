@@ -42,7 +42,7 @@ func restartDNSServer(channel chan struct{}, config *Config) {
 		log.Println("Restarting DNS server")
 		if err := server.Shutdown(); err != nil {
 			// Error from closing listeners, or context timeout:
-			log.Printf("Error shutting down DNS Server: %v", err)
+			log.Fatalf("Error shutting down DNS Server: %v", err)
 		}
 	}
 }
