@@ -6,6 +6,7 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o
 
 FROM gcr.io/distroless/static-debian11
 COPY --from=builder /go-hole /go-hole
-COPY /data/test-blacklist.txt /data/blacklist.txt
+COPY config.json.default config.json
+COPY static /static
 ENTRYPOINT ["/go-hole"]
-EXPOSE 53/udp
+EXPOSE 53/udp 8080
