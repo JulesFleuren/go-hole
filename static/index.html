@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GoHole Blocklists</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="import/bulma/bulma.min.css">
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"> -->
   </head>
 
   <body>
@@ -62,7 +63,7 @@
 
         var formData = new FormData(form);
 	      const formDataJsonString = JSON.stringify(Object.fromEntries(formData.entries()));
-        fetch("/", {
+        fetch("/config", {
           method: "POST",
           headers:{
             "Content-Type": "application/json"

@@ -7,10 +7,18 @@ import (
 	"strings"
 )
 
-func indexController(w http.ResponseWriter, r *http.Request, config *Config, stopDNSServer chan struct{}) {
+func configController(w http.ResponseWriter, r *http.Request, config *Config, stopDNSServer chan struct{}) {
 	switch r.Method {
 	case "GET":
-		http.ServeFile(w, r, "./static/index.html")
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		jsonResp, err := json.Marshal(config)
+		if err != nil {
+			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		}
+		w.Write(jsonResp)
+
 	case "POST":
 		var responseBody map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&responseBody)
@@ -21,9 +29,15 @@ func indexController(w http.ResponseWriter, r *http.Request, config *Config, sto
 			return
 		}
 
+		blocklistsString, ok := responseBody["blocklists"].(string)
+		if !ok {
+			log.Printf(`Error: Cannot convert "blocklists" field to string`)
+			http.Error(w, `Error: Cannot convert "blocklists" field to string`, http.StatusBadRequest)
+			return
+		}
 		// process urls
 		// TODO: what if type assertion fails?
-		sources := strings.Split(responseBody["blocklists"].(string), "\n")
+		sources := strings.Split(blocklistsString, "\n")
 
 		// trim whitespace and remove empty urls
 		strippedSources := make([]string, 0, len(sources))
@@ -56,23 +70,11 @@ func indexController(w http.ResponseWriter, r *http.Request, config *Config, sto
 	}
 }
 
-func configController(w http.ResponseWriter, r *http.Request, config Config) {
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	jsonResp, err := json.Marshal(config)
-	if err != nil {
-		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
-	}
-	w.Write(jsonResp)
-}
-
 func runWebPageServer(stopDNSServer chan struct{}, config *Config) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		indexController(w, r, config, stopDNSServer)
-	})
+	http.Handle("/", http.FileServer(http.Dir("./static")))
 
 	http.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
-		configController(w, r, *config)
+		configController(w, r, config, stopDNSServer)
 	})
 
 	http.ListenAndServe(":8080", nil)
