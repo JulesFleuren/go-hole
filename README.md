@@ -26,7 +26,7 @@ nslookup -port=8053 googleadservices.com localhost
 
 The amount of intrusive ads and tracking services on the Internet is huge and continues to grow. While it is quite easy to block them on a computer using your favourite ad-block plugin, it is difficult or even impossible to do the same on mobile devices. This project aims to block unwanted ads and services at the network level, without the need to install any software on the user's device.
 
-This project is inspired by [Pi-Hole](https://github.com/pi-hole/pi-hole), but with a slightly different approach. `go-hole` provides a single binary that only selectively filters the unwanted domains. The blacklist is static and is loaded at startup and cached in memory.
+This project is inspired by [Pi-Hole](https://github.com/pi-hole/pi-hole).
 
 ## Build & Run
 
@@ -47,15 +47,11 @@ go build
 | ---------------------- | ------------- | --------------------------------------------------------------------- |
 | `DNS_PORT`             | `53`          | UDP port where to listen for DNS queries.                             |
 | `PROMETHEUS_PORT`      | `9090`        | TCP port where to serve the collected metrics. Port 0 disables the service.                        |
-| `UPSTREAM_DNS`         | `1.1.1.1:53`  | IP and port of the upstream DNS to use to resolve the queries.        |
-| `UPSTREAM_TLS_SRVNAME` | ``            | DNS server name for TLS certificate validation (enables DNS over TLS)  |
+| `UPSTREAM_DNS`         | `1.1.1.1:853`  | IP and port of the upstream DNS to use to resolve the queries.        |
+| `UPSTREAM_TLS_SRVNAME` | `one.one.one.one`            | DNS server name for TLS certificate validation (enables DNS over TLS)  |
 | `DEBUG`                | `false`       | If true, `go-hole` logs all queries to the standard output.           |
 
-You can customize the behaviour of `go-hole` by changing domains in the [blacklist](./data/blacklist.txt). The default blacklist can be build with:
-
-```sh
-./scripts/make-blacklist.sh
-```
+By default no domains are blacklisted. You can import blacklists from online hosted sources, such as those listed on [firebog.net](https://firebog.net/). To import such a list visit the server on port 8080 and paste the url's in the text box. Once you press `Save changes`, the dns server will be restarted and will now block the domains from the sources.
 
 ## FAQ
 
