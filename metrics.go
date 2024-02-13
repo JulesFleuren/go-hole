@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -14,8 +15,8 @@ var (
 
 // runPrometheusServer starts an HTTP server which exposes
 // the application metrics in the Prometheus format.
-func runPrometheusServer() {
-	port := getEnvOrDefault("PROMETHEUS_PORT", "9090")
+func runPrometheusServer(config Config) {
+	port := config.PrometheusPort
 	if port == "0" {
 		fmt.Printf("HTTP server with metrics has been DISABLED.\n")
 		return

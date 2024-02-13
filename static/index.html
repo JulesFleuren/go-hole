@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GoHole Blocklists</title>
+    <link rel="stylesheet" href="import/bulma/bulma.min.css">
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"> -->
+  </head>
+
+  <body>
+    <section class="section">
+      <div class="container">
+        <div class="columns is-centered">
+          <form class="column is-half" id="form" method="POST">
+            <h1 class="title">
+              Blocklists
+            </h1>
+            <div class="field">
+              <label for="blocklists" class="label">Provide URL's of blocklists separated by a newline</label>
+                <textarea class="textarea" name="blocklists" id="blocklists" placeholder="Blocklists"></textarea>
+            </div>
+              <button class="button is-link">Save changes</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <div class="modal" id="restart-modal">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">DNS Server Restart</p>
+          <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+          The DNS Server is being restarted
+        </section>
+        <footer class="modal-card-foot">
+          <button class="button is-success">Ok</button>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      // Fill blocklists textarea with current blocklists
+      async function fillBlocklistsArea() {
+        const response = await fetch("config");
+        const config = await response.json();
+        document.getElementById("blocklists").value = config.BlocklistSources.join("\n")
+      }
+
+      // Handle errors during request processing
+      function catchErrors(error) {
+        console.error(error);
+        alert(error);
+      }
+
+      function submitForm(e) {
+        e.preventDefault();
+
+        var form = document.getElementById("form");
+
+        var formData = new FormData(form);
+	      const formDataJsonString = JSON.stringify(Object.fromEntries(formData.entries()));
+        fetch("/config", {
+          method: "POST",
+          headers:{
+            "Content-Type": "application/json"
+          },
+          body: formDataJsonString,
+        })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("network returns error");
+          }
+          return response.json();
+        })
+        .then((resp) => {
+          let modal = document.getElementById("restart-modal");
+          modal.classList.add('is-active');
+        })
+        .catch((error) => {catchErrors(error);});
+      }
+
+      document.getElementById("form").addEventListener("submit", submitForm);
+
+      document.querySelector("#restart-modal").querySelector('.button').onclick = () => {
+        document.getElementById("restart-modal").classList.remove('is-active');
+      }
+
+      fillBlocklistsArea()
+    </script>
+  </body>
+</html>

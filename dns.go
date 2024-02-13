@@ -33,30 +33,26 @@ var (
 
 // runDNSServer starts a custom DNS server that blocks the domains contained
 // in a blacklist and answers the other queries using an upstream DNS server.
-func runDNSServer() {
+func createDNSServer(config Config) *dns.Server {
 
 	// load the blocked domains
-	blacklist := LoadBlacklistOrFail(blacklistPath)
-	fmt.Printf("Loading list of %d blocked domains...\n", blacklist.Size())
+	blacklist := LoadBlacklistFromSources(config.BlocklistSources)
 
 	overrides := LoadOverrideListOrFail(overridePath)
 
 	// make the custom handler function to reply to DNS queries
-	upstream := getEnvOrDefault("UPSTREAM_DNS", "1.1.1.1:53")
-	tlsSN := getEnvOrDefault("UPSTREAM_TLS_SRVNAME", "")
-	logging := getEnvOrDefault("DEBUG", "") == "true"
+	upstream := config.UpstreamDNS
+	tlsSN := config.UpstreamTlsSrvName
+	logging := config.Debug
 	handler := makeDNSHandler(blacklist, upstream, tlsSN, overrides, logging)
 
 	// start the server
-	port := getEnvOrDefault("DNS_PORT", "53")
+	port := config.DNSPort
 	fmt.Printf("Starting DNS server on UDP port %s (logging = %t)...\n", port, logging)
 	fmt.Printf("using upstream: %s (TLS: %s)\n", upstream, tlsSN)
 	server := &dns.Server{Addr: ":" + port, Net: "udp"}
 	dns.HandleFunc(".", handler)
-	err := server.ListenAndServe()
-	if err != nil {
-		log.Fatal(err)
-	}
+	return server
 }
 
 // makeDNSHandler creates an handler for the DNS server that caches

@@ -4,8 +4,8 @@ go-hole
 .git/
 README.md
 LICENSE
-scripts/
 .travis.yml
 .gitignore
 .vscode
 *.tar
+*.pem
