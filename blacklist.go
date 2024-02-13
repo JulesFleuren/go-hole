@@ -11,8 +11,6 @@ import (
 )
 
 var (
-	blacklistPath = "./data/blacklist.txt"
-
 	blacklistHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: namespace,
