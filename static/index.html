@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GoHole Blocklists</title>
+    <title>GoHole Settings</title>
     <link rel="stylesheet" href="import/bulma/bulma.min.css">
     <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"> -->
   </head>
@@ -14,13 +14,40 @@
         <div class="columns is-centered">
           <form class="column is-half" id="form" method="POST">
             <h1 class="title">
-              Blocklists
+              GoHole Settings
             </h1>
+
+            <p></p>
+
+            <h2 class="subtitle">
+              Blocklists
+            </h2>
             <div class="field">
               <label for="blocklists" class="label">Provide URL's of blocklists separated by a newline</label>
-                <textarea class="textarea" name="blocklists" id="blocklists" placeholder="Blocklists"></textarea>
+                <textarea class="textarea" name="BlocklistSources" id="blocklists" placeholder="Blocklists"></textarea>
             </div>
-              <button class="button is-link">Save changes</button>
+
+            <h2 class="subtitle">
+              Upstream DNS
+            </h2>
+            <div class="columns">
+              <div class="column is-three-quarters">
+                <label for="upstream-dns-ip">IP</label>
+                <input class="input" name="UpstreamDNSIP" type="text" placeholder="Upstream DNS" id="upstream-dns-ip">
+              </div>
+              <div class="column">
+                <label for="upstream-dns-port">Port</label>
+                <input class="input" name="UpstreamDNSPort" type="number" placeholder="53" id="upstream-dns-port" min="1" max="65535">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="upstream-dns-domain">Domain of upstream DNS (leave empty if DNS over TLS should be disabled)</label>
+              <input class="input" name="UpstreamTlsSrvName" type="text" placeholder="Upstream DNS" id="upstream-dns-domain">
+            </div>
+
+            <button class="button is-link">Save changes</button>
+
           </form>
         </div>
       </div>
@@ -44,10 +71,16 @@
 
     <script>
       // Fill blocklists textarea with current blocklists
-      async function fillBlocklistsArea() {
+      async function fillCurrentSettings() {
         const response = await fetch("config");
         const config = await response.json();
         document.getElementById("blocklists").value = config.BlocklistSources.join("\n")
+        const dnsIp = config.UpstreamDNS.split(":")[0]
+        const dnsPort = config.UpstreamDNS.split(":")[1]
+        document.getElementById("upstream-dns-ip").value = dnsIp
+        document.getElementById("upstream-dns-port").value = dnsPort
+        document.getElementById("upstream-dns-domain").value = config.UpstreamTlsSrvName
+
       }
 
       // Handle errors during request processing
@@ -62,7 +95,17 @@
         var form = document.getElementById("form");
 
         var formData = new FormData(form);
-	      const formDataJsonString = JSON.stringify(Object.fromEntries(formData.entries()));
+
+        formData.append("UpstreamDNS", formData.get("UpstreamDNSIP").concat(":", formData.get("UpstreamDNSPort")))
+        formData.delete("UpstreamDNSIP")
+        formData.delete("UpstreamDNSPort")
+
+        formObject = Object.fromEntries(formData.entries())
+        
+        // Split BlocklistSources by newline and trim whitespace
+        formObject. BlocklistSources = formObject.BlocklistSources.split(/[\r\n]+/).map(s => s.trim())
+
+	      const formDataJsonString = JSON.stringify(formObject);
         fetch("/config", {
           method: "POST",
           headers:{
@@ -89,7 +132,7 @@
         document.getElementById("restart-modal").classList.remove('is-active');
       }
 
-      fillBlocklistsArea()
+      fillCurrentSettings()
     </script>
   </body>
 </html>

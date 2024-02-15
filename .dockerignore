@@ -3,7 +3,7 @@ vendor/
 go-hole
 .git/
 README.md
-LICENSE
+**/LICENSE
 .travis.yml
 .gitignore
 .vscode

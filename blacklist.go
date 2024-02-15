@@ -80,6 +80,7 @@ func (blacklist *Blacklist) Contains(domain string) bool {
 }
 
 func LoadBlacklistFromSources(sources []string) *Blacklist {
+
 	domains, size := combineDomainsFromSources(sources)
 
 	// allocate the data structure of optimal Size

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"os"
 )
 
@@ -51,6 +52,26 @@ func (c *Config) updateFromEnvVar() error {
 		if val == "true" {
 			c.Debug = true
 		}
+	}
+	return nil
+}
+
+func (c *Config) updateFromHttpRequest(r *http.Request) error {
+	newConfig := Config{}
+	err := json.NewDecoder(r.Body).Decode(&newConfig)
+	if err != nil {
+		return err
+	}
+
+	// Only these fields can be changed with an http request
+	if newConfig.UpstreamDNS != "" {
+		c.UpstreamDNS = newConfig.UpstreamDNS
+	}
+	if newConfig.UpstreamDNS != "" {
+		c.UpstreamTlsSrvName = newConfig.UpstreamTlsSrvName
+	}
+	if newConfig.UpstreamDNS != "" {
+		c.BlocklistSources = newConfig.BlocklistSources
 	}
 	return nil
 }

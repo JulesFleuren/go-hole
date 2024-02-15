@@ -4,3 +4,4 @@ go-hole
 *.tar
 *.pem
 config.json
+*.exe

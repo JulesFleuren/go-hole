@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"strings"
 )
 
 func configController(w http.ResponseWriter, r *http.Request, config *Config, stopDNSServer chan struct{}) {
@@ -20,34 +20,13 @@ func configController(w http.ResponseWriter, r *http.Request, config *Config, st
 		w.Write(jsonResp)
 
 	case "POST":
-		var responseBody map[string]interface{}
-		err := json.NewDecoder(r.Body).Decode(&responseBody)
-
+		err := config.updateFromHttpRequest(r)
 		if err != nil {
 			log.Printf("Error decoding request: %v", err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		blocklistsString, ok := responseBody["blocklists"].(string)
-		if !ok {
-			log.Printf(`Error: Cannot convert "blocklists" field to string`)
-			http.Error(w, `Error: Cannot convert "blocklists" field to string`, http.StatusBadRequest)
-			return
-		}
-		// process urls
-		// TODO: what if type assertion fails?
-		sources := strings.Split(blocklistsString, "\n")
-
-		// trim whitespace and remove empty urls
-		strippedSources := make([]string, 0, len(sources))
-		for _, source := range sources {
-			if s := strings.TrimSpace(source); s != "" {
-				strippedSources = append(strippedSources, s)
-			}
-		}
-
-		config.BlocklistSources = strippedSources
 		config.writeToFile("config.json")
 
 		resp := make(map[string]string)
@@ -56,6 +35,7 @@ func configController(w http.ResponseWriter, r *http.Request, config *Config, st
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -77,5 +57,6 @@ func runWebPageServer(stopDNSServer chan struct{}, config *Config) {
 		configController(w, r, config, stopDNSServer)
 	})
 
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", nil)
+	fmt.Println(err)
 }

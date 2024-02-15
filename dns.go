@@ -31,28 +31,48 @@ var (
 	)
 )
 
-// runDNSServer starts a custom DNS server that blocks the domains contained
+// startDNSServer starts a custom DNS server that blocks the domains contained
 // in a blacklist and answers the other queries using an upstream DNS server.
-func createDNSServer(config Config) *dns.Server {
+// If restartChannel receives a signal, the DNS server will be restarted, reloading
+// the blocklists and other config settings.
+func startDNSServer(restartChannel chan struct{}, config *Config) (*dns.Server, *Blacklist) {
+	for {
+		blacklist := LoadBlacklistFromSources(config.BlocklistSources)
 
-	// load the blocked domains
-	blacklist := LoadBlacklistFromSources(config.BlocklistSources)
+		overrides := LoadOverrideListOrFail(overridePath)
 
-	overrides := LoadOverrideListOrFail(overridePath)
+		// make the custom handler function to reply to DNS queries
+		upstream := config.UpstreamDNS
+		tlsSN := config.UpstreamTlsSrvName
+		logging := config.Debug
+		handler := makeDNSHandler(blacklist, upstream, tlsSN, overrides, logging)
 
-	// make the custom handler function to reply to DNS queries
-	upstream := config.UpstreamDNS
-	tlsSN := config.UpstreamTlsSrvName
-	logging := config.Debug
-	handler := makeDNSHandler(blacklist, upstream, tlsSN, overrides, logging)
+		// start the server
+		port := config.DNSPort
+		fmt.Printf("Starting DNS server on UDP port %s (logging = %t)...\n", port, logging)
+		fmt.Printf("using upstream: %s (TLS: %s)\n", upstream, tlsSN)
+		server := &dns.Server{Addr: ":" + port, Net: "udp"}
+		dns.HandleFunc(".", handler)
 
-	// start the server
-	port := config.DNSPort
-	fmt.Printf("Starting DNS server on UDP port %s (logging = %t)...\n", port, logging)
-	fmt.Printf("using upstream: %s (TLS: %s)\n", upstream, tlsSN)
-	server := &dns.Server{Addr: ":" + port, Net: "udp"}
-	dns.HandleFunc(".", handler)
-	return server
+		go func(srv *dns.Server) {
+			err := server.ListenAndServe()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}(server)
+
+		// wait for signal to restart server
+		<-restartChannel
+
+		// We received an interrupt signal, shut down.
+		log.Println("Restarting DNS server")
+		if err := server.Shutdown(); err != nil {
+			// Error from closing listeners, or context timeout:
+			log.Fatalf("Error shutting down DNS Server: %v", err)
+		}
+		// blacklist.array = nil
+		// blacklist.filter = nil
+	}
 }
 
 // makeDNSHandler creates an handler for the DNS server that caches
@@ -99,7 +119,7 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 			res.SetRcode(req, dns.RcodeFormatError)
 			err := w.WriteMsg(res)
 			if err != nil {
-				errorLogger(err, "Error to write DNS response message to client")
+				errorLogger(err, "Error to write DNS response message to client ")
 			}
 
 			// collect metrics
@@ -124,7 +144,7 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 			res.Answer = cached.Answer
 			err := w.WriteMsg(res)
 			if err != nil {
-				errorLogger(err, "Error to write DNS response message to client")
+				errorLogger(err, "Error to write DNS response message to client ")
 			}
 
 			// log the query
@@ -147,7 +167,7 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 			res.SetRcode(req, dns.RcodeNameError)
 			err := w.WriteMsg(res)
 			if err != nil {
-				errorLogger(err, "Error to write DNS response message to client")
+				errorLogger(err, "Error to write DNS response message to client ")
 			}
 
 			// log the query
@@ -166,7 +186,7 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 			//mx, err := dns.NewRR("example.com. 10 IN A " + override)
 			mx, err := dns.NewRR(domain + ". 10 IN A " + override)
 			if err != nil {
-				log.Print("Error to generate the DNS response message for the client", err)
+				log.Print("Error to generate the DNS response message for the client ", err)
 				return
 			}
 
@@ -178,7 +198,7 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 			log.Printf(" --> Override response for %s to %s (remote address = %s)", domain, override, w.RemoteAddr())
 			err = w.WriteMsg(res)
 			if err != nil {
-				errorLogger(err, "Error to write DNS response message to client")
+				errorLogger(err, "Error to write DNS response message to client ")
 			}
 
 			// collect metrics
@@ -195,7 +215,7 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 			// reply to the query
 			err := w.WriteMsg(res)
 			if err != nil {
-				errorLogger(err, "Error to write DNS response message to client")
+				errorLogger(err, "Error to write DNS response message to client ")
 			}
 
 			// cache the result if any
