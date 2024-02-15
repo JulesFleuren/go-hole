@@ -20,7 +20,7 @@ nslookup -port=8053 googleadservices.com localhost
 
 ## How does it work?
 
-`go-hole` runs a custom DNS server that selectively blocks unwanted domains by replying `NXDomain (Non-Existent Domain)` to the client. It uses an upstream DNS (by default [1.1.1.1](https://1.1.1.1/)) to resolve the queries the first time, then it caches the response to speed up the following requests.
+`go-hole` runs a custom DNS server that selectively blocks unwanted domains by replying `NXDomain (Non-Existent Domain)` to the client. It uses an upstream DNS (by default DNS over Tls via cloudflare [1.1.1.1](https://1.1.1.1/)) to resolve the queries the first time, then it caches the response to speed up the following requests.
 
 ## Why?
 
@@ -53,6 +53,10 @@ go build
 
 By default no domains are blacklisted. You can import blacklists from online hosted sources, such as those listed on [firebog.net](https://firebog.net/). To import such a list visit the server on port 8080 and paste the url's in the text box. Once you press `Save changes`, the dns server will be restarted and will now block the domains from the sources.
 
+## Web interface
+
+Some settings of go-hole can be changed through the webinterface which is accesible on port 8080. The interface is password protected, but it is an http connection, so someone who knows what they're doing could steal your login details. So **ONLY USE THIS ON A TRUSTED HOME NETWORK AND DON'T EXPOSE IT TO THE INTERNET.** The default username and password are both `admin`, see this [FAQ](#change-password) on how to change this.
+
 ## FAQ
 
 ### Do you have a Docker container?
@@ -62,6 +66,28 @@ Sure, checkout the automatic build on Docker Hub: https://hub.docker.com/r/david
 ### Can I combine it with a VPN software?
 
 Sure, this is the main setup of `go-hole`. For example, you can combine it with [OpenVPN](https://openvpn.net/). We will publish soon a guide to setup `go-hole` and OpenVPN together on a private server.
+
+### Change Password
+
+Changing the username and password can be done either via the environmental variables, or via the configuration file. You need to set the values of `ADMIN_USR_HASH` and `ADMIN_PWD_HASH` to a bcrypt hash of the desired username and password respectively. Once again a warning that the credentials are sent over http, so don't use a password that you use for anything else. The hashes can be generated with the following code snippet. If you set the cost higher, the hash will be harder to crack, but it increases the time it takes to verify the password. Since the hash is most likely not the weakest link in this system, there is not a lot of use in setting it higher.
+
+
+```
+package main
+
+import (
+	"encoding/base64"
+	"fmt"
+	"golang.org/x/crypto/bcrypt"
+)
+
+func main() {
+	cost := 4
+	hash, _ := bcrypt.GenerateFromPassword([]byte("<username/passwd>"), cost)
+	fmt.Println(base64.StdEncoding.EncodeToString(hash[:]))
+}
+```
+Tip: if you don't have go installed you can use https://go.dev/play/.
 
 ### Privacy Issues
 

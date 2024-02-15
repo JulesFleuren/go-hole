@@ -1,19 +1,23 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"os"
 )
 
 type Config struct {
-	DNSPort            string
-	PrometheusPort     string
-	UpstreamDNS        string
-	UpstreamTlsSrvName string
-	Debug              bool
+	UpstreamDNS        string   `json:"UpstreamDNS"`
+	UpstreamTlsSrvName string   `json:"UpstreamTlsSrvName"`
+	BlocklistSources   []string `json:"BlocklistSources"`
 
-	BlocklistSources []string
+	DNSPort        string `json:"DNSPort,omitempty"`
+	PrometheusPort string `json:"PrometheusPort,omitempty"`
+	Debug          bool   `json:"Debug,omitempty"`
+
+	AdminUsernameHash []byte `json:"AdminUsernameHash,omitempty"`
+	AdminPasswordHash []byte `json:"AdminPasswordHash,omitempty"`
 }
 
 func ConfigFromFile(path string) (Config, error) {
@@ -53,27 +57,46 @@ func (c *Config) updateFromEnvVar() error {
 			c.Debug = true
 		}
 	}
+
+	val, ok = os.LookupEnv("ADMIN_USR_HASH")
+	if ok {
+		hash, err := base64.StdEncoding.DecodeString(val)
+		if err != nil {
+			c.AdminUsernameHash = hash
+		}
+	}
+
+	val, ok = os.LookupEnv("ADMIN_PWD_HASH")
+	if ok {
+		hash, err := base64.StdEncoding.DecodeString(val)
+		if err != nil {
+			c.AdminPasswordHash = hash
+		}
+	}
+
 	return nil
 }
 
 func (c *Config) updateFromHttpRequest(r *http.Request) error {
-	newConfig := Config{}
-	err := json.NewDecoder(r.Body).Decode(&newConfig)
+	configFromRequest := Config{}
+	err := json.NewDecoder(r.Body).Decode(&configFromRequest)
 	if err != nil {
 		return err
 	}
 
-	// Only these fields can be changed with an http request
-	if newConfig.UpstreamDNS != "" {
-		c.UpstreamDNS = newConfig.UpstreamDNS
-	}
-	if newConfig.UpstreamDNS != "" {
-		c.UpstreamTlsSrvName = newConfig.UpstreamTlsSrvName
-	}
-	if newConfig.UpstreamDNS != "" {
-		c.BlocklistSources = newConfig.BlocklistSources
-	}
+	c.UpstreamDNS = configFromRequest.UpstreamDNS
+	c.UpstreamTlsSrvName = configFromRequest.UpstreamTlsSrvName
+	c.BlocklistSources = configFromRequest.BlocklistSources
 	return nil
+}
+
+func (c *Config) JsonForHttpRequest() ([]byte, error) {
+	configForRequest := Config{
+		UpstreamDNS:        c.UpstreamDNS,
+		UpstreamTlsSrvName: c.UpstreamTlsSrvName,
+		BlocklistSources:   c.BlocklistSources,
+	}
+	return json.Marshal(configForRequest)
 }
 
 func (c *Config) writeToFile(path string) error {
