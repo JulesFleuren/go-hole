@@ -4,5 +4,7 @@
 	"UpstreamDNS": "1.1.1.1:853",
 	"UpstreamTlsSrvName": "one.one.one.one",
 	"Debug": false,
-	"BlocklistSources": []
+	"BlocklistSources": [],
+	"AdminUsernameHash": "JDJhJDA0JEM5NVkza2lLMFB6LndWU3FQTWNwZXVLbU1QeEJYZkRtdi5uajRkbnF4eGVBRlBiZ2FseTZH",
+	"AdminPasswordHash": "JDJhJDA0JEM5NVkza2lLMFB6LndWU3FQTWNwZXVLbU1QeEJYZkRtdi5uajRkbnF4eGVBRlBiZ2FseTZH"
 }
