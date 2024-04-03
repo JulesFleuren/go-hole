@@ -35,7 +35,7 @@ var (
 // in a blacklist and answers the other queries using an upstream DNS server.
 // If restartChannel receives a signal, the DNS server will be restarted, reloading
 // the blocklists and other config settings.
-func startDNSServer(restartChannel chan struct{}, config *Config) (*dns.Server, *Blacklist) {
+func startDNSServer(restartChannel chan struct{}) (*dns.Server, *Blacklist) {
 	for {
 		blacklist := LoadBlacklistFromSources(config.BlocklistSources)
 

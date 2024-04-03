@@ -15,7 +15,7 @@ var (
 
 // runPrometheusServer starts an HTTP server which exposes
 // the application metrics in the Prometheus format.
-func runPrometheusServer(config Config) {
+func runPrometheusServer() {
 	port := config.PrometheusPort
 	if port == "0" {
 		fmt.Printf("HTTP server with metrics has been DISABLED.\n")

@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func configController(w http.ResponseWriter, r *http.Request, config *Config, stopDNSServer chan struct{}) {
+func configController(w http.ResponseWriter, r *http.Request, stopDNSServer chan struct{}) {
 	switch r.Method {
 	case "GET":
 
@@ -52,7 +52,7 @@ func configController(w http.ResponseWriter, r *http.Request, config *Config, st
 	}
 }
 
-func basicAuth(config Config, next http.HandlerFunc) http.HandlerFunc {
+func basicAuth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract the username and password from the request
 		// Authorization header. If no Authentication header is present
@@ -83,11 +83,11 @@ func basicAuth(config Config, next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-func runWebPageServer(stopDNSServer chan struct{}, config *Config) {
+func runWebPageServer(stopDNSServer chan struct{}) {
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
-	http.HandleFunc("/config", basicAuth(*config, func(w http.ResponseWriter, r *http.Request) {
-		configController(w, r, config, stopDNSServer)
+	http.HandleFunc("/config", basicAuth(func(w http.ResponseWriter, r *http.Request) {
+		configController(w, r, stopDNSServer)
 	}))
 
 	err := http.ListenAndServe(":8080", nil)
