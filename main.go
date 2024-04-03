@@ -4,10 +4,6 @@ import (
 	"log"
 )
 
-var (
-	config Config
-)
-
 func main() {
 
 	config, err := ConfigFromFile("/etc/gohole/config.json")
@@ -16,11 +12,11 @@ func main() {
 		log.Fatal("Error: Config file not found")
 	}
 
-	go runPrometheusServer()
+	go runPrometheusServer(config)
 
 	restartDNSServerChannel := make(chan struct{})
 
-	go startDNSServer(restartDNSServerChannel)
+	go startDNSServer(restartDNSServerChannel, &config)
 
-	runWebPageServer(restartDNSServerChannel)
+	runWebPageServer(restartDNSServerChannel, &config)
 }
