@@ -81,7 +81,7 @@ func (blacklist *Blacklist) Contains(domain string) bool {
 
 func LoadBlacklistFromSources(sources []string) *Blacklist {
 
-	domains, size := combineDomainsFromSources(sources)
+	domains, _ := combineDomainsFromSources(sources)
 
 	// allocate the data structure of optimal Size
 	n := float64(len(domains))
@@ -95,7 +95,7 @@ func LoadBlacklistFromSources(sources []string) *Blacklist {
 		blacklist.filter.AddString(d)
 	}
 
-	fmt.Printf("Loaded %d domains. Size of array: %.2f MB, size of bloom filter: %.2f MB\n", len(domains), float64(size)/float64(1e6), float64(m)/float64(8e6))
+	fmt.Printf("Loaded %d domains.", len(domains))
 	return &blacklist
 }
 
@@ -104,6 +104,12 @@ func LoadBlacklistFromSources(sources []string) *Blacklist {
 func combineDomainsFromSources(sources []string) (domainsArray []string, memorySize int) {
 	domains := list.New()
 	for _, source := range sources {
+
+		// skip emtpy lines
+		if source == "" {
+			continue
+		}
+
 		newDomains, err := getDomains(source)
 
 		if err != nil {
