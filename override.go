@@ -26,6 +26,8 @@ func addOverridesToCache(config *Config, cache *Cache) {
 				req.SetQuestion(dns.Fqdn(override.Domain), dns.TypeA)
 			} else if override.Type == "AAAA" {
 				req.SetQuestion(dns.Fqdn(override.Domain), dns.TypeAAAA)
+			} else if override.Type == "PTR" {
+				req.SetQuestion(dns.Fqdn(override.Domain), dns.TypePTR)
 			} else {
 				continue
 			}
@@ -74,6 +76,32 @@ func addOverridesToCache(config *Config, cache *Cache) {
 					log.Printf("Not able to parse override IP: %s\n", override.Ip)
 					continue
 				}
+
+				req.SetQuestion(dns.Fqdn(override.Domain), recordType)
+				res.SetReply(req)
+				res.Answer = []dns.RR{record}
+
+				// add record to cache with no expiration
+				cache.Set(&req.Question[0], res, NoExpiration)
+
+			case "PTR":
+				recordType := dns.TypePTR
+
+				record := new(dns.PTR)
+				record.Hdr = dns.RR_Header{
+					Name:   dns.Fqdn(override.Domain),
+					Rrtype: recordType,
+					Class:  dns.ClassINET,
+					Ttl:    3600,
+				}
+				record.Ptr = dns.Fqdn(override.Ip)
+
+				req.SetQuestion(dns.Fqdn(override.Domain), recordType)
+				res.SetReply(req)
+				res.Answer = []dns.RR{record}
+
+				// add record to cache with no expiration
+				cache.Set(&req.Question[0], res, NoExpiration)
 
 			default:
 				log.Printf("Unsupported override type: %s\n", override.Type)
