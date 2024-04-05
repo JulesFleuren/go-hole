@@ -5,6 +5,12 @@
 	"UpstreamTlsSrvName": "one.one.one.one",
 	"Debug": false,
 	"BlocklistSources": [],
+	"Overrides": [
+		{
+			"Domain": "use-application-dns.net",
+			"Ip": ""
+		}
+	],
 	"AdminUsernameHash": "JDJhJDA0JEM5NVkza2lLMFB6LndWU3FQTWNwZXVLbU1QeEJYZkRtdi5uajRkbnF4eGVBRlBiZ2FseTZH",
 	"AdminPasswordHash": "JDJhJDA0JEM5NVkza2lLMFB6LndWU3FQTWNwZXVLbU1QeEJYZkRtdi5uajRkbnF4eGVBRlBiZ2FseTZH"
 }
