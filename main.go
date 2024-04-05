@@ -6,8 +6,7 @@ import (
 
 func main() {
 
-	// config, err := ConfigFromFile("/etc/gohole/config.json")
-	config, err := ConfigFromFile("config.json")
+	config, err := ConfigFromFile("/etc/gohole/config.json")
 	config.updateFromEnvVar()
 	if err != nil {
 		log.Fatal("Error: Config file not found")
