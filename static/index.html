@@ -52,6 +52,7 @@
             <table class="table is-fullwidth" id="overrides">
               <thead>
                 <tr>
+                  <th>Type</th>
                   <th>Domain</th>
                   <th>IP (empty for NXDOMAIN)</th>
                   <th></th>
@@ -99,6 +100,7 @@
 
     <script>
       const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^$/
+      const ipv6Regex = /^([0-9a-f]|:){1,4}(:([0-9a-f]{0,4})*){1,7}$|^$/
 
       // Fill blocklists textarea with current blocklists
       async function fillCurrentSettings() {
@@ -112,7 +114,7 @@
         document.getElementById("upstream-dns-domain").value = config.UpstreamTlsSrvName
 
         for (const override of config.Overrides) {
-          addOverrideRow("", override.Domain, override.Ip)
+          addOverrideRow("", override.Type, override.Domain, override.Ip)
         }
       }
 
@@ -142,6 +144,7 @@
         var overridesMap = new Map();
 
         // Get all the values of domain and ip inputs
+        var types = formData.getAll("override-type");
         var domains = formData.getAll("override-domain");
         var ips = formData.getAll("override-ip");
         
@@ -152,11 +155,14 @@
           if (domains[i] == "") {
             continue
           }
-          if (!ipv4Regex.test(ips[i])) {
+          if (
+            (types[i] == "A" && !ipv4Regex.test(ips[i])) ||
+            (types[i] == "AAAA" && !ipv6Regex.test(ips[i]))
+            ) {
             alert("Invalid IP adress in Domain Overrides")
             return
           }
-          formObject.Overrides.push({Domain: domains[i], Ip: ips[i]})
+          formObject.Overrides.push({Type: types[i], Domain: domains[i], Ip: ips[i]})
         }
 
 	      const formDataJsonString = JSON.stringify(formObject);
@@ -186,12 +192,32 @@
         document.getElementById("restart-modal").classList.remove('is-active');
       }
 
-      function addOverrideRow(e, domain, ip) {
+      function addOverrideRow(e, type, domain, ip) {
         if (e !== "") {
           e.preventDefault();
         }
 
+        const recordTypes = ["A", "AAAA"]
         var row = document.createElement('tr')
+
+        var dropdownCell = document.createElement('td')
+        dropdownCell.classList = "is-vcentered"
+        var dropdownDiv = document.createElement('div')
+        dropdownDiv.classList = "select"
+        var dropdown = document.createElement('select')
+        dropdown.value = recordTypes[0]
+        dropdown.name = "override-type"
+
+        for (const type of recordTypes) {
+          var opt = document.createElement('option');
+          opt.value = type;
+          opt.innerHTML = type;
+          dropdown.appendChild(opt);
+        }
+
+        dropdownDiv.appendChild(dropdown)
+        dropdownCell.appendChild(dropdownDiv)
+        row.appendChild(dropdownCell)
 
         var domainCell = document.createElement('td')
         var domainInput = document.createElement('input')
@@ -211,7 +237,11 @@
 
         // validate IP address
         ipInput.addEventListener('input', function() {
-          if (!ipv4Regex.test(this.value)) {
+
+          if (
+            (this.parentElement.parentElement.querySelector("select").value == "A" && !ipv4Regex.test(this.value)) ||
+            (this.parentElement.parentElement.querySelector("select").value == "AAAA" && !ipv6Regex.test(this.value))
+          ) {
             this.classList.add('is-danger');
           } else {
             this.classList.remove('is-danger');
@@ -237,6 +267,9 @@
         }
         if (typeof ip !== "undefined") {
           ipInput.value = ip
+        }
+        if (typeof type !== "undefined") {
+          dropdown.value =type
         }
         
         const overridesList = document.getElementById("overrides")

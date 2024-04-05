@@ -7,6 +7,12 @@
 	"BlocklistSources": [],
 	"Overrides": [
 		{
+			"Type": "A",
+			"Domain": "use-application-dns.net",
+			"Ip": ""
+		},
+		{
+			"Type": "AAAA",
 			"Domain": "use-application-dns.net",
 			"Ip": ""
 		}
