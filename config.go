@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	UpstreamDNS        string   `json:"UpstreamDNS"`
-	UpstreamTlsSrvName string   `json:"UpstreamTlsSrvName"`
-	BlocklistSources   []string `json:"BlocklistSources"`
+	UpstreamDNS        string     `json:"UpstreamDNS"`
+	UpstreamTlsSrvName string     `json:"UpstreamTlsSrvName"`
+	BlocklistSources   []string   `json:"BlocklistSources"`
+	Overrides          []Override `json:"Overrides"`
 
 	DNSPort        string `json:"DNSPort,omitempty"`
 	PrometheusPort string `json:"PrometheusPort,omitempty"`
@@ -84,17 +85,21 @@ func (c *Config) updateFromHttpRequest(r *http.Request) error {
 		return err
 	}
 
+	// Only these configs can be updated with a post request
 	c.UpstreamDNS = configFromRequest.UpstreamDNS
 	c.UpstreamTlsSrvName = configFromRequest.UpstreamTlsSrvName
 	c.BlocklistSources = configFromRequest.BlocklistSources
+	c.Overrides = configFromRequest.Overrides
 	return nil
 }
 
 func (c *Config) JsonForHttpRequest() ([]byte, error) {
+	// Only these config fields are send to the front end
 	configForRequest := Config{
 		UpstreamDNS:        c.UpstreamDNS,
 		UpstreamTlsSrvName: c.UpstreamTlsSrvName,
 		BlocklistSources:   c.BlocklistSources,
+		Overrides:          c.Overrides,
 	}
 	return json.Marshal(configForRequest)
 }

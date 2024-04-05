@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -91,5 +90,5 @@ func runWebPageServer(stopDNSServer chan struct{}, config *Config) {
 	}))
 
 	err := http.ListenAndServe(":8080", nil)
-	fmt.Println(err)
+	log.Println(err)
 }

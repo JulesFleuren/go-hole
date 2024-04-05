@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -39,18 +38,16 @@ func startDNSServer(restartChannel chan struct{}, config *Config) (*dns.Server, 
 	for {
 		blacklist := LoadBlacklistFromSources(config.BlocklistSources)
 
-		overrides := LoadOverrideListOrFail(overridePath)
-
 		// make the custom handler function to reply to DNS queries
 		upstream := config.UpstreamDNS
 		tlsSN := config.UpstreamTlsSrvName
 		logging := config.Debug
-		handler := makeDNSHandler(blacklist, upstream, tlsSN, overrides, logging)
+		handler := makeDNSHandler(config, blacklist, upstream, tlsSN, logging)
 
 		// start the server
 		port := config.DNSPort
-		fmt.Printf("Starting DNS server on UDP port %s (logging = %t)...\n", port, logging)
-		fmt.Printf("using upstream: %s (TLS: %s)\n", upstream, tlsSN)
+		log.Printf("Starting DNS server on UDP port %s (logging = %t)...\n", port, logging)
+		log.Printf("using upstream: %s (TLS: %s)\n", upstream, tlsSN)
 		server := &dns.Server{Addr: ":" + port, Net: "udp"}
 		dns.HandleFunc(".", handler)
 
@@ -77,12 +74,12 @@ func startDNSServer(restartChannel chan struct{}, config *Config) (*dns.Server, 
 
 // makeDNSHandler creates an handler for the DNS server that caches
 // results from the upstream DNS and blocks domains in the blacklist.
-func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrides map[string]string, logging bool) func(dns.ResponseWriter, *dns.Msg) {
+func makeDNSHandler(config *Config, blacklist *Blacklist, upstream string, tlsNS string, logging bool) func(dns.ResponseWriter, *dns.Msg) {
 
 	// create the logger functions
 	logger := func(res *dns.Msg, duration time.Duration, how string) {}
 	errorLogger := func(err error, description string) {
-		log.Print(description, err)
+		log.Printf("%s: %v", description, err)
 	}
 	if logging {
 		logger = func(msg *dns.Msg, rtt time.Duration, how string) {
@@ -95,6 +92,9 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 
 	// cache for the DNS replies from the DNS server
 	cache := NewCache()
+
+	// all overrides are added as permanent entries to the cache
+	addOverridesToCache(config, &cache)
 
 	// we use a single client to resolve queries against the upstream DNS
 	client := new(dns.Client)
@@ -134,14 +134,14 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 		domain := strings.TrimRight(query.Name, ".")
 		queryType := dns.TypeToString[query.Qtype]
 
-		// check the cache first: if a domain is in the cache, it cannot be blocked
-		// this optimized response times for allowed domains over the blocked domains
+		// check the cache first
 		cached, found := cache.Get(&query)
 		if found {
-
-			// cache found, use the cached answer
-			res := cached.SetReply(req)
+			res := new(dns.Msg)
+			// cache found, use the cached answer and response code
+			res.SetReply(req)
 			res.Answer = cached.Answer
+			res.Rcode = cached.Rcode
 			err := w.WriteMsg(res)
 			if err != nil {
 				errorLogger(err, "Error to write DNS response message to client ")
@@ -158,7 +158,9 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 			return
 		}
 
-		// then, check if the domain is blocked
+		// then, check if the domain is blocked. If a domain is blocked, it is
+		// not added to the cache (unless it's an override), to prioritize the
+		// response speed of non-blocked domains
 		blocked := blacklist.Contains(domain)
 		if blocked {
 
@@ -177,33 +179,6 @@ func makeDNSHandler(blacklist *Blacklist, upstream string, tlsNS string, overrid
 			// collect metrics
 			durationSeconds := duration.Seconds()
 			queriesHistogram.WithLabelValues("block", queryType).Observe(durationSeconds)
-
-			return
-		}
-
-		// then, check if the domain is overridden locally
-		if override, ok := overrides[domain]; ok && queryType == "A" {
-			//mx, err := dns.NewRR("example.com. 10 IN A " + override)
-			mx, err := dns.NewRR(domain + ". 10 IN A " + override)
-			if err != nil {
-				log.Print("Error to generate the DNS response message for the client ", err)
-				return
-			}
-
-			res := req.SetReply(req)
-			req.Question = []dns.Question{query}
-			res.Answer = []dns.RR{mx}
-
-			// TODO: you probably want to remove this logging
-			log.Printf(" --> Override response for %s to %s (remote address = %s)", domain, override, w.RemoteAddr())
-			err = w.WriteMsg(res)
-			if err != nil {
-				errorLogger(err, "Error to write DNS response message to client ")
-			}
-
-			// collect metrics
-			durationSeconds := time.Since(start).Seconds()
-			queriesHistogram.WithLabelValues("override", queryType).Observe(durationSeconds)
 
 			return
 		}

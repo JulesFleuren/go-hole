@@ -22,10 +22,11 @@
             <h2 class="subtitle">
               Blocklists
             </h2>
-            <div class="field">
+            <div class="field" style="margin-bottom: 50px;">
               <label for="blocklists" class="label">Provide URL's of blocklists separated by a newline</label>
                 <textarea class="textarea" name="BlocklistSources" id="blocklists" placeholder="Blocklists"></textarea>
             </div>
+
 
             <h2 class="subtitle">
               Upstream DNS
@@ -40,13 +41,40 @@
                 <input class="input" name="UpstreamDNSPort" type="number" placeholder="53" id="upstream-dns-port" min="1" max="65535">
               </div>
             </div>
-
-            <div class="field">
+            <div class="field" style="margin-bottom: 50px;">
               <label for="upstream-dns-domain">Domain of upstream DNS (leave empty if DNS over TLS should be disabled)</label>
               <input class="input" name="UpstreamTlsSrvName" type="text" placeholder="Upstream DNS" id="upstream-dns-domain">
             </div>
 
-            <button class="button is-link">Save changes</button>
+            <h2 class="subtitle">
+              Domain overrides
+            </h2>
+            <table class="table is-fullwidth" id="overrides">
+              <thead>
+                <tr>
+                  <th>Domain</th>
+                  <th>IP (empty for NXDOMAIN)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <!-- <tr>
+                <td><input class="input" name="UpstreamDNSIP" type="text" placeholder="domain" id="upstream-dns-ip"></td>
+                <td><input class="input" name="UpstreamDNSPort" type="text" placeholder="NXDOMAIN" id="upstream-dns-port"></td>
+              </tr> -->
+            </table>
+            <!-- <div class="columns" id="overrides">
+              <div class="column is-half">
+                <label for="upstream-dns-ip">Domain</label>
+                <input class="input" name="UpstreamDNSIP" type="text" placeholder="domain" id="upstream-dns-ip">
+              </div>
+              <div class="column">
+                <label for="upstream-dns-port">IP (leave empty for NXDOMAIN response)</label>
+                <input class="input" name="UpstreamDNSPort" type="text" placeholder="NXDOMAIN" id="upstream-dns-port" min="1" max="65535">
+              </div>
+            </div> -->
+            <button class="button is-link" id="add-override-row">Add Row</button>
+
+            <button class="button is-success" id="save-button">Save changes</button>
 
           </form>
         </div>
@@ -70,6 +98,8 @@
     </div>
 
     <script>
+      const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^$/
+
       // Fill blocklists textarea with current blocklists
       async function fillCurrentSettings() {
         const response = await fetch("config");
@@ -81,6 +111,9 @@
         document.getElementById("upstream-dns-port").value = dnsPort
         document.getElementById("upstream-dns-domain").value = config.UpstreamTlsSrvName
 
+        for (const override of config.Overrides) {
+          addOverrideRow("", override.Domain, override.Ip)
+        }
       }
 
       // Handle errors during request processing
@@ -103,7 +136,28 @@
         formObject = Object.fromEntries(formData.entries())
         
         // Split BlocklistSources by newline and trim whitespace
-        formObject. BlocklistSources = formObject.BlocklistSources.split(/[\r\n]+/).map(s => s.trim())
+        formObject.BlocklistSources = formObject.BlocklistSources.split(/[\r\n]+/).map(s => s.trim())
+
+        // make a map with domain:ip as key and value
+        var overridesMap = new Map();
+
+        // Get all the values of domain and ip inputs
+        var domains = formData.getAll("override-domain");
+        var ips = formData.getAll("override-ip");
+        
+        formObject.Overrides = []
+
+        // Iterate through the arrays and create an array of overrides
+        for (var i = 0; i < domains.length; i++) {
+          if (domains[i] == "") {
+            continue
+          }
+          if (!ipv4Regex.test(ips[i])) {
+            alert("Invalid IP adress in Domain Overrides")
+            return
+          }
+          formObject.Overrides.push({Domain: domains[i], Ip: ips[i]})
+        }
 
 	      const formDataJsonString = JSON.stringify(formObject);
         fetch("/config", {
@@ -126,11 +180,70 @@
         .catch((error) => {catchErrors(error);});
       }
 
-      document.getElementById("form").addEventListener("submit", submitForm);
+      document.getElementById("save-button").addEventListener('click', submitForm)
 
       document.querySelector("#restart-modal").querySelector('.button').onclick = () => {
         document.getElementById("restart-modal").classList.remove('is-active');
       }
+
+      function addOverrideRow(e, domain, ip) {
+        if (e !== "") {
+          e.preventDefault();
+        }
+
+        var row = document.createElement('tr')
+
+        var domainCell = document.createElement('td')
+        var domainInput = document.createElement('input')
+        domainInput.placeholder = "domain"
+        domainInput.classList = "input"
+        domainInput.name = "override-domain"
+        domainCell.appendChild(domainInput)
+        row.appendChild(domainCell)
+        
+        var ipCell = document.createElement('td')
+        var ipInput = document.createElement('input')
+        ipInput.placeholder = "NXDOMAIN"
+        ipInput.classList = "input"
+        ipInput.name = "override-ip"
+        ipCell.appendChild(ipInput)
+        row.appendChild(ipCell)
+
+        // validate IP address
+        ipInput.addEventListener('input', function() {
+          if (!ipv4Regex.test(this.value)) {
+            this.classList.add('is-danger');
+          } else {
+            this.classList.remove('is-danger');
+          }
+        });
+
+        var deleteCell = document.createElement('td')
+        deleteCell.classList = "is-vcentered"
+        var deleteButton = document.createElement('delete')
+        deleteButton.classList = "delete"
+        deleteCell.appendChild(deleteButton)
+        row.appendChild(deleteCell)
+
+        deleteButton.addEventListener('click', function() {
+          // Get the parent row and remove it from the table
+          var rowToRemove = this.parentNode.parentNode;
+          rowToRemove.parentNode.removeChild(rowToRemove);
+        });
+
+
+        if (typeof domain !== "undefined") {
+          domainInput.value = domain
+        }
+        if (typeof ip !== "undefined") {
+          ipInput.value = ip
+        }
+        
+        const overridesList = document.getElementById("overrides")
+        overridesList.appendChild(row)
+      }
+
+      document.getElementById("add-override-row").addEventListener('click', addOverrideRow)
 
       fillCurrentSettings()
     </script>

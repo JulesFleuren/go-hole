@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"regexp"
@@ -95,7 +96,7 @@ func LoadBlacklistFromSources(sources []string) *Blacklist {
 		blacklist.filter.AddString(d)
 	}
 
-	fmt.Printf("Loaded %d domains.", len(domains))
+	log.Printf("Loaded %d domains.\n", len(domains))
 	return &blacklist
 }
 

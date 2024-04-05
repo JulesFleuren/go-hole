@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -18,11 +17,11 @@ var (
 func runPrometheusServer(config Config) {
 	port := config.PrometheusPort
 	if port == "0" {
-		fmt.Printf("HTTP server with metrics has been DISABLED.\n")
+		log.Printf("HTTP server with metrics has been DISABLED.\n")
 		return
 	}
 
-	fmt.Printf("Starting HTTP server with metrics on TCP port %s...\n", port)
+	log.Printf("Starting HTTP server with metrics on TCP port %s...\n", port)
 	server := &http.Server{Addr: "0.0.0.0:" + port}
 	http.Handle("/metrics", promhttp.Handler())
 	err := server.ListenAndServe()
